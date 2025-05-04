@@ -1,17 +1,15 @@
 import streamlit as st
-import logging
-import time
 import requests
 import socket
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
 
-# ========== Tool 1: Facebook Ads Scraper ==========
+# ========== Tool 1: Facebook Ads Placeholder ==========
+def scrape_ads_placeholder():
+    return [{
+        "ad_id": "N/A",
+        "ad_url": "#",
+        "ad_content": "Scraping ads requires a local environment with Chrome. This feature is unavailable on Streamlit Cloud."
+    }]
+
 COUNTRIES = {
     "US": "🇺🇸 United States",
     "UK": "🇬🇧 United Kingdom",
@@ -28,62 +26,6 @@ COUNTRIES = {
     "AU": "🇦🇺 Australia",
 }
 
-def scrape_ads(country_code, query):
-    url = f"https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country={country_code}&q={query}&search_type=keyword_unordered"
-    logging.info(f"🔍 Searching Facebook Ads Library: {url}")
-
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--disable-popup-blocking")
-
-    driver = None
-    ads_data = []
-
-    try:
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        driver.get(url)
-
-        time.sleep(7)
-        WebDriverWait(driver, 12).until(
-            EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Library ID')]"))
-        )
-
-        ad_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'Library ID')]")
-
-        for ad in ad_elements:
-            ad_id_match = ad.text.strip().split()[-1]
-            ad_url = f"https://www.facebook.com/ads/library/?id={ad_id_match}"
-
-            ad_content = "N/A"
-            try:
-                ad_container = ad.find_element(By.XPATH, "./ancestor::div[contains(@class, 'xh8yej3')]")
-                ad_content_element = ad_container.find_element(By.XPATH, ".//div[@style='white-space: pre-wrap;']/span")
-                ad_content = ad_content_element.text.strip()
-            except:
-                pass
-
-            ads_data.append({
-                "query": query,
-                "country": country_code,
-                "ad_id": ad_id_match,
-                "ad_url": ad_url,
-                "ad_content": ad_content
-            })
-
-    except Exception as e:
-        logging.error(f"❌ Scraper error: {e}")
-        st.error(f"Scraping failed: {e}")
-    finally:
-        if driver:
-            driver.quit()
-
-    return ads_data
-
-
 # ========== Tool 2: Reddit Mentions ==========
 def search_reddit_posts(query, size=10):
     url = f"https://api.pushshift.io/reddit/search/submission/?q={query}&size={size}&sort=desc"
@@ -95,13 +37,11 @@ def search_reddit_posts(query, size=10):
         st.error(f"Reddit API failed: {e}")
         return [{"title": f"Error: {e}", "url": ""}]
 
-
 # ========== Tool 3: Malware Simulation ==========
 def analyze_malware(file_name):
     if "malware" in file_name.lower():
         return {"status": "Malicious", "description": "This file is flagged as malware."}
     return {"status": "Clean", "description": "No malicious indicators found."}
-
 
 # ========== Tool 4: WHOIS ==========
 def whois_lookup(domain):
@@ -110,7 +50,6 @@ def whois_lookup(domain):
         return {"domain": domain, "ip": ip}
     except Exception as e:
         return {"error": str(e)}
-
 
 # ========== Streamlit UI ==========
 st.set_page_config(page_title="Cyber Tools", layout="wide")
@@ -123,19 +62,12 @@ with tab1:
     country = st.selectbox("Select a country", list(COUNTRIES.keys()))
     query = st.text_input("Enter keyword to search ads for", key="ads_query")
     if st.button("Search Facebook Ads"):
-        if not query.strip():
-            st.warning("Please enter a keyword to search.")
-        else:
-            with st.spinner("Scraping ads..."):
-                results = scrape_ads(country, query)
-                if results:
-                    st.success(f"Found {len(results)} ads.")
-                    for ad in results:
-                        st.markdown(f"**Ad ID:** [{ad['ad_id']}]({ad['ad_url']})")
-                        st.markdown(f"**Content:** {ad['ad_content']}")
-                        st.markdown("---")
-                else:
-                    st.warning("No ads found or scraping failed.")
+        st.warning("⚠️ This feature is not supported on Streamlit Cloud. Please run locally for full functionality.")
+        results = scrape_ads_placeholder()
+        for ad in results:
+            st.markdown(f"**Ad ID:** {ad['ad_id']}")
+            st.markdown(f"**Content:** {ad['ad_content']}")
+            st.markdown("---")
 
 with tab2:
     st.header("Reddit Mentions Finder")
