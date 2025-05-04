@@ -1,9 +1,8 @@
 import streamlit as st
 import logging
-
-
 import time
-import logging
+import requests
+import socket
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -12,6 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
+# ========== Tool 1: Facebook Ads Scraper ==========
 COUNTRIES = {
     "US": "🇺🇸 United States",
     "UK": "🇬🇧 United Kingdom",
@@ -47,15 +47,12 @@ def scrape_ads(country_code, query):
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
         driver.get(url)
 
-        logging.info("🕒 Waiting for Facebook ads to load...")
         time.sleep(7)
-
         WebDriverWait(driver, 12).until(
             EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Library ID')]"))
         )
 
         ad_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'Library ID')]")
-        logging.info(f"✅ Found {len(ad_elements)} ads!")
 
         for ad in ad_elements:
             ad_id_match = ad.text.strip().split()[-1]
@@ -67,7 +64,7 @@ def scrape_ads(country_code, query):
                 ad_content_element = ad_container.find_element(By.XPATH, ".//div[@style='white-space: pre-wrap;']/span")
                 ad_content = ad_content_element.text.strip()
             except:
-                logging.warning(f"⚠️ Could not extract content for Ad ID: {ad_id_match}")
+                pass
 
             ads_data.append({
                 "query": query,
@@ -78,7 +75,7 @@ def scrape_ads(country_code, query):
             })
 
     except Exception as e:
-        logging.error(f"❌ Facebook Ad scraping error: {e}")
+        logging.error(f"❌ Scraper error: {e}")
 
     finally:
         if driver:
@@ -87,21 +84,80 @@ def scrape_ads(country_code, query):
     return ads_data
 
 
-# === Streamlit UI ===
+# ========== Tool 2: Reddit Mentions ==========
+def search_reddit_posts(query, size=10):
+    url = f"https://api.pushshift.io/reddit/search/submission/?q={query}&size={size}&sort=desc"
+    try:
+        response = requests.get(url)
+        data = response.json()
+        return data.get("data", [])
+    except Exception as e:
+        return [{"title": f"Error: {e}", "url": ""}]
 
-st.title("Facebook Ads Scraper Tool")
 
-country = st.selectbox("Select a country", list(COUNTRIES.keys()))
-query = st.text_input("Enter keyword to search ads for")
+# ========== Tool 3: Malware Simulation ==========
+def analyze_malware(file_name):
+    if "malware" in file_name.lower():
+        return {"status": "Malicious", "description": "This file is flagged as malware."}
+    return {"status": "Clean", "description": "No malicious indicators found."}
 
-if st.button("Search Facebook Ads"):
-    with st.spinner("Scraping ads..."):
-        results = scrape_ads(country, query)
-        if results:
-            st.success(f"Found {len(results)} ads.")
-            for ad in results:
-                st.markdown(f"**Ad ID:** [{ad['ad_id']}]({ad['ad_url']})")
-                st.markdown(f"**Content:** {ad['ad_content']}")
-                st.markdown("---")
+
+# ========== Tool 4: WHOIS ==========
+def whois_lookup(domain):
+    try:
+        ip = socket.gethostbyname(domain)
+        return {"domain": domain, "ip": ip}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# ========== Streamlit UI ==========
+st.set_page_config(page_title="Cyber Tools", layout="wide")
+st.title("🛡️ Cyber Tools Suite")
+
+tab1, tab2, tab3, tab4 = st.tabs(["🔍 Facebook Ads", "📢 Reddit Search", "🧪 Malware Check", "🌐 WHOIS Lookup"])
+
+with tab1:
+    st.header("Facebook Ads Scraper")
+    country = st.selectbox("Select a country", list(COUNTRIES.keys()))
+    query = st.text_input("Enter keyword to search ads for", key="ads_query")
+    if st.button("Search Facebook Ads"):
+        with st.spinner("Scraping ads..."):
+            results = scrape_ads(country, query)
+            if results:
+                st.success(f"Found {len(results)} ads.")
+                for ad in results:
+                    st.markdown(f"**Ad ID:** [{ad['ad_id']}]({ad['ad_url']})")
+                    st.markdown(f"**Content:** {ad['ad_content']}")
+                    st.markdown("---")
+            else:
+                st.warning("No ads found.")
+
+with tab2:
+    st.header("Reddit Mentions Finder")
+    reddit_query = st.text_input("Enter keyword to search Reddit", key="reddit_query")
+    if st.button("Search Reddit"):
+        with st.spinner("Fetching posts..."):
+            posts = search_reddit_posts(reddit_query)
+            for post in posts:
+                title = post.get("title", "No title")
+                url = post.get("url", "#")
+                st.markdown(f"- [{title}]({url})")
+
+with tab3:
+    st.header("Malware Simulation Tool")
+    malware_filename = st.text_input("Enter filename to simulate scan")
+    if st.button("Check File"):
+        result = analyze_malware(malware_filename)
+        st.info(f"Status: {result['status']}")
+        st.markdown(result['description'])
+
+with tab4:
+    st.header("WHOIS Lookup")
+    domain = st.text_input("Enter domain to check WHOIS info")
+    if st.button("Lookup Domain"):
+        result = whois_lookup(domain)
+        if "error" in result:
+            st.error(result["error"])
         else:
-            st.warning("No ads found or failed to scrape.")
+            st.success(f"Domain: {result['domain']} ➜ IP: {result['ip']}")
