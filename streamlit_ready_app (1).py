@@ -76,7 +76,7 @@ def scrape_ads(country_code, query):
 
     except Exception as e:
         logging.error(f"❌ Scraper error: {e}")
-
+        st.error(f"Scraping failed: {e}")
     finally:
         if driver:
             driver.quit()
@@ -92,6 +92,7 @@ def search_reddit_posts(query, size=10):
         data = response.json()
         return data.get("data", [])
     except Exception as e:
+        st.error(f"Reddit API failed: {e}")
         return [{"title": f"Error: {e}", "url": ""}]
 
 
@@ -122,42 +123,57 @@ with tab1:
     country = st.selectbox("Select a country", list(COUNTRIES.keys()))
     query = st.text_input("Enter keyword to search ads for", key="ads_query")
     if st.button("Search Facebook Ads"):
-        with st.spinner("Scraping ads..."):
-            results = scrape_ads(country, query)
-            if results:
-                st.success(f"Found {len(results)} ads.")
-                for ad in results:
-                    st.markdown(f"**Ad ID:** [{ad['ad_id']}]({ad['ad_url']})")
-                    st.markdown(f"**Content:** {ad['ad_content']}")
-                    st.markdown("---")
-            else:
-                st.warning("No ads found.")
+        if not query.strip():
+            st.warning("Please enter a keyword to search.")
+        else:
+            with st.spinner("Scraping ads..."):
+                results = scrape_ads(country, query)
+                if results:
+                    st.success(f"Found {len(results)} ads.")
+                    for ad in results:
+                        st.markdown(f"**Ad ID:** [{ad['ad_id']}]({ad['ad_url']})")
+                        st.markdown(f"**Content:** {ad['ad_content']}")
+                        st.markdown("---")
+                else:
+                    st.warning("No ads found or scraping failed.")
 
 with tab2:
     st.header("Reddit Mentions Finder")
     reddit_query = st.text_input("Enter keyword to search Reddit", key="reddit_query")
     if st.button("Search Reddit"):
-        with st.spinner("Fetching posts..."):
-            posts = search_reddit_posts(reddit_query)
-            for post in posts:
-                title = post.get("title", "No title")
-                url = post.get("url", "#")
-                st.markdown(f"- [{title}]({url})")
+        if not reddit_query.strip():
+            st.warning("Please enter a keyword to search.")
+        else:
+            with st.spinner("Fetching posts..."):
+                posts = search_reddit_posts(reddit_query)
+                if posts:
+                    for post in posts:
+                        title = post.get("title", "No title")
+                        url = post.get("url", "#")
+                        st.markdown(f"- [{title}]({url})")
+                else:
+                    st.warning("No posts found or request failed.")
 
 with tab3:
     st.header("Malware Simulation Tool")
     malware_filename = st.text_input("Enter filename to simulate scan")
     if st.button("Check File"):
-        result = analyze_malware(malware_filename)
-        st.info(f"Status: {result['status']}")
-        st.markdown(result['description'])
+        if not malware_filename.strip():
+            st.warning("Please enter a filename.")
+        else:
+            result = analyze_malware(malware_filename)
+            st.info(f"Status: {result['status']}")
+            st.markdown(result['description'])
 
 with tab4:
     st.header("WHOIS Lookup")
     domain = st.text_input("Enter domain to check WHOIS info")
     if st.button("Lookup Domain"):
-        result = whois_lookup(domain)
-        if "error" in result:
-            st.error(result["error"])
+        if not domain.strip():
+            st.warning("Please enter a domain.")
         else:
-            st.success(f"Domain: {result['domain']} ➜ IP: {result['ip']}")
+            result = whois_lookup(domain)
+            if "error" in result:
+                st.error(result["error"])
+            else:
+                st.success(f"Domain: {result['domain']} ➜ IP: {result['ip']}")
